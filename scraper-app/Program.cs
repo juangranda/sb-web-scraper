@@ -32,6 +32,12 @@ foreach (var row in rows.Take(MaxEntries))
 
 PrintTable("All entries", entries);
 
+PrintTable("More than five words in the title, ordered by comments (desc)",
+	entries.Where(e => CountWords(e.Title) > 5).OrderByDescending(e => e.Comments));
+
+PrintTable("Five or fewer words in the title, ordered by points (desc)",
+	entries.Where(e => CountWords(e.Title) <= 5).OrderByDescending(e => e.Points));
+
 static void PrintTable(string heading, IEnumerable<Entry> items)
 {
 	Console.WriteLine();

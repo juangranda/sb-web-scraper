@@ -1,42 +1,127 @@
 ﻿using HtmlAgilityPack;
+using System.Diagnostics;
+using System.Text;
 using System.Text.RegularExpressions;
 
 const string Url = "https://news.ycombinator.com/";
 const int MaxEntries = 30;
 
-using var http = new HttpClient();
-http.DefaultRequestHeaders.UserAgent.ParseAdd("HackerNewsScraper/1.0");
-
-var html = await http.GetStringAsync(Url);
-var doc = new HtmlDocument();
-doc.LoadHtml(html);
-
-var entries = new List<Entry>();
-var rows = doc.DocumentNode.SelectNodes("//tr[contains(@class, 'athing')]") ?? Enumerable.Empty<HtmlNode>();
-
-foreach (var row in rows.Take(MaxEntries))
+var filters = new Dictionary<string, (string Heading, Func<IEnumerable<Entry>, IEnumerable<Entry>> Apply)>
 {
-	var number = ParseInt(row.SelectSingleNode(".//span[@class='rank']")?.InnerText);
-	var title = HtmlEntity.DeEntitize(
-		row.SelectSingleNode(".//span[@class='titleline']/a")?.InnerText ?? "").Trim();
+	["none"] = ("All entries", e => e),
+	["long-titles"] = ("More than five words in the title, by comments (desc)",
+		e => e.Where(x => CountWords(x.Title) > 5).OrderByDescending(x => x.Comments)),
+	["short-titles"] = ("Five or fewer words in the title, by points (desc)",
+		e => e.Where(x => CountWords(x.Title) <= 5).OrderByDescending(x => x.Points)),
+};
 
-	// Points and comments live in the following <tr> (td.subtext).
-	var subtext = row.SelectSingleNode("following-sibling::tr[1]//td[@class='subtext']");
-	var points = ParseInt(subtext?.SelectSingleNode(".//span[@class='score']")?.InnerText);
-	var commentsLink = subtext?.SelectNodes(".//a")
-		?.LastOrDefault(a => HtmlEntity.DeEntitize(a.InnerText).Contains("comment"));
-	var comments = ParseInt(commentsLink?.InnerText);
+var filterName = args.FirstOrDefault() ?? "none";
 
-	entries.Add(new Entry(number, title, points, comments));
+var record = new ScrapeRecord
+{
+	TimestampUtc = DateTime.UtcNow,
+	Filter = filterName,
+};
+
+try
+{
+	if (filters.TryGetValue(filterName, out var filter))
+	{
+		using var http = new HttpClient();
+		http.DefaultRequestHeaders.UserAgent.ParseAdd("HackerNewsScraper/1.0");
+
+		var fetch = Stopwatch.StartNew();
+		using var response = await http.GetAsync(Url);
+		record.HttpStatus = (int)response.StatusCode;
+		response.EnsureSuccessStatusCode();
+		var html = await response.Content.ReadAsStringAsync();
+		record.FetchMs = fetch.ElapsedMilliseconds;
+		record.ResponseBytes = Encoding.UTF8.GetByteCount(html);
+
+		var entries = Scrape(html);
+		var result = filter.Apply(entries).ToList();
+		record.EntriesScraped = entries.Count;
+		record.EntriesReturned = result.Count;
+
+		PrintTable(filter.Heading, result);
+		record.Success = true;
+	}
+	else
+	{
+		//throw error
+	}
+}
+catch (Exception ex)
+{
+	record.Success = false;
+	record.Error = ex.Message;
+	Console.Error.WriteLine($"Error: {ex.Message}");
+}
+finally
+{
+	// Save to db.
 }
 
-PrintTable("All entries", entries);
+static List<Entry> Scrape(string html)
+{
+	var doc = new HtmlDocument();
+	doc.LoadHtml(html);
 
-PrintTable("More than five words in the title, ordered by comments (desc)",
-	entries.Where(e => CountWords(e.Title) > 5).OrderByDescending(e => e.Comments));
+	var entries = new List<Entry>();
+	var rows = doc.DocumentNode.SelectNodes("//tr[contains(@class, 'athing')]") ?? Enumerable.Empty<HtmlNode>();
 
-PrintTable("Five or fewer words in the title, ordered by points (desc)",
-	entries.Where(e => CountWords(e.Title) <= 5).OrderByDescending(e => e.Points));
+	foreach (var row in rows.Take(MaxEntries))
+	{
+		var number = ParseInt(row.SelectSingleNode(".//span[@class='rank']")?.InnerText);
+		var title = HtmlEntity.DeEntitize(
+			row.SelectSingleNode(".//span[@class='titleline']/a")?.InnerText ?? "").Trim();
+
+		// Points and comments live in the following <tr> (td.subtext).
+		var subtext = row.SelectSingleNode("following-sibling::tr[1]//td[@class='subtext']");
+		var points = ParseInt(subtext?.SelectSingleNode(".//span[@class='score']")?.InnerText);
+		var commentsLink = subtext?.SelectNodes(".//a")
+			?.LastOrDefault(a => HtmlEntity.DeEntitize(a.InnerText).Contains("comment"));
+		var comments = ParseInt(commentsLink?.InnerText);
+
+		entries.Add(new Entry(number, title, points, comments));
+	}
+	return entries;
+}
+
+// delete below after refactoring
+// // using var http = new HttpClient();
+// // http.DefaultRequestHeaders.UserAgent.ParseAdd("HackerNewsScraper/1.0");
+
+// // var html = await http.GetStringAsync(Url);
+// // var doc = new HtmlDocument();
+// // doc.LoadHtml(html);
+
+// // var entries = new List<Entry>();
+// // var rows = doc.DocumentNode.SelectNodes("//tr[contains(@class, 'athing')]") ?? Enumerable.Empty<HtmlNode>();
+
+// // foreach (var row in rows.Take(MaxEntries))
+// // {
+// // 	var number = ParseInt(row.SelectSingleNode(".//span[@class='rank']")?.InnerText);
+// // 	var title = HtmlEntity.DeEntitize(
+// // 		row.SelectSingleNode(".//span[@class='titleline']/a")?.InnerText ?? "").Trim();
+
+// // 	// Points and comments live in the following <tr> (td.subtext).
+// // 	var subtext = row.SelectSingleNode("following-sibling::tr[1]//td[@class='subtext']");
+// // 	var points = ParseInt(subtext?.SelectSingleNode(".//span[@class='score']")?.InnerText);
+// // 	var commentsLink = subtext?.SelectNodes(".//a")
+// // 		?.LastOrDefault(a => HtmlEntity.DeEntitize(a.InnerText).Contains("comment"));
+// // 	var comments = ParseInt(commentsLink?.InnerText);
+
+// // 	entries.Add(new Entry(number, title, points, comments));
+// // }
+
+// // PrintTable("All entries", entries);
+
+// // PrintTable("More than five words in the title, ordered by comments (desc)",
+// // 	entries.Where(e => CountWords(e.Title) > 5).OrderByDescending(e => e.Comments));
+
+// // PrintTable("Five or fewer words in the title, ordered by points (desc)",
+// // 	entries.Where(e => CountWords(e.Title) <= 5).OrderByDescending(e => e.Points));
 
 static void PrintTable(string heading, IEnumerable<Entry> items)
 {

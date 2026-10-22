@@ -15,6 +15,11 @@ var filters = new Dictionary<string, (string Heading, Func<IEnumerable<Entry>, I
 		e => e.Where(x => CountWords(x.Title) <= 5).OrderByDescending(x => x.Points)),
 };
 
+var dataFolder = Path.Combine(Directory.GetCurrentDirectory(), "data");
+Directory.CreateDirectory(dataFolder);
+var pathToDb = Path.Combine(dataFolder, "usage.db");
+var usageStore = new UsageStore(pathToDb);
+
 var filterName = args.FirstOrDefault() ?? "none";
 
 var record = new ScrapeRecord
@@ -23,6 +28,7 @@ var record = new ScrapeRecord
 	Filter = filterName,
 };
 
+var total = Stopwatch.StartNew();
 try
 {
 	if (filters.TryGetValue(filterName, out var filter))
@@ -59,7 +65,8 @@ catch (Exception ex)
 }
 finally
 {
-	// Save to db.
+	record.DurationMs = total.ElapsedMilliseconds;
+	usageStore.Save(record);
 }
 
 static List<Entry> Scrape(string html)
@@ -87,41 +94,6 @@ static List<Entry> Scrape(string html)
 	}
 	return entries;
 }
-
-// delete below after refactoring
-// // using var http = new HttpClient();
-// // http.DefaultRequestHeaders.UserAgent.ParseAdd("HackerNewsScraper/1.0");
-
-// // var html = await http.GetStringAsync(Url);
-// // var doc = new HtmlDocument();
-// // doc.LoadHtml(html);
-
-// // var entries = new List<Entry>();
-// // var rows = doc.DocumentNode.SelectNodes("//tr[contains(@class, 'athing')]") ?? Enumerable.Empty<HtmlNode>();
-
-// // foreach (var row in rows.Take(MaxEntries))
-// // {
-// // 	var number = ParseInt(row.SelectSingleNode(".//span[@class='rank']")?.InnerText);
-// // 	var title = HtmlEntity.DeEntitize(
-// // 		row.SelectSingleNode(".//span[@class='titleline']/a")?.InnerText ?? "").Trim();
-
-// // 	// Points and comments live in the following <tr> (td.subtext).
-// // 	var subtext = row.SelectSingleNode("following-sibling::tr[1]//td[@class='subtext']");
-// // 	var points = ParseInt(subtext?.SelectSingleNode(".//span[@class='score']")?.InnerText);
-// // 	var commentsLink = subtext?.SelectNodes(".//a")
-// // 		?.LastOrDefault(a => HtmlEntity.DeEntitize(a.InnerText).Contains("comment"));
-// // 	var comments = ParseInt(commentsLink?.InnerText);
-
-// // 	entries.Add(new Entry(number, title, points, comments));
-// // }
-
-// // PrintTable("All entries", entries);
-
-// // PrintTable("More than five words in the title, ordered by comments (desc)",
-// // 	entries.Where(e => CountWords(e.Title) > 5).OrderByDescending(e => e.Comments));
-
-// // PrintTable("Five or fewer words in the title, ordered by points (desc)",
-// // 	entries.Where(e => CountWords(e.Title) <= 5).OrderByDescending(e => e.Points));
 
 static void PrintTable(string heading, IEnumerable<Entry> items)
 {

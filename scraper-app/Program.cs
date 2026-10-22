@@ -30,11 +30,25 @@ foreach (var row in rows.Take(MaxEntries))
 	entries.Add(new Entry(number, title, points, comments));
 }
 
-Console.WriteLine($"{"#",3}  {"Points",6}  {"Comments",8}  Title");
-Console.WriteLine(new string('-', 80));
-foreach (var e in entries)
+PrintTable("All entries", entries);
+
+static void PrintTable(string heading, IEnumerable<Entry> items)
 {
-	Console.WriteLine($"{e.Number,3}  {e.Points,6}  {e.Comments,8}  {e.Title}");
+	Console.WriteLine();
+	Console.WriteLine(heading);
+	Console.WriteLine($"{"#",3}  {"Points",6}  {"Comments",8}  {"Words",5}  Title");
+	Console.WriteLine(new string('-', 80));
+	foreach (var e in items)
+	{
+		Console.WriteLine($"{e.Number,3}  {e.Points,6}  {e.Comments,8}  {CountWords(e.Title),5}  {e.Title}");
+	}
+}
+
+static int CountWords(string text)
+{
+	var textSplit = text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+	var count =	textSplit.Count(token => token.Any(char.IsLetterOrDigit));
+	return count;
 }
 
 // Extracts the first integer in the text ("123 points", "45&nbsp;comments", "7."); 0 if none.

@@ -9,8 +9,7 @@ public class UsageStore
 	{
 		_connectionString = new SqliteConnectionStringBuilder { DataSource = path }.ToString();
 
-		using var conn = new SqliteConnection(_connectionString);
-		conn.Open();
+		using var conn = Open();
 		using var cmd = conn.CreateCommand();
 		cmd.CommandText = """
 			CREATE TABLE IF NOT EXISTS usage (
@@ -32,8 +31,7 @@ public class UsageStore
 
 	public void Save(ScrapeRecord r)
 	{
-		using var conn = new SqliteConnection(_connectionString);
-		conn.Open();
+		using var conn = Open();
 		using var cmd = conn.CreateCommand();
 		cmd.CommandText = """
 			INSERT INTO usage (timestamp_utc, filter, success, http_status, entries_scraped,
@@ -51,5 +49,12 @@ public class UsageStore
 		cmd.Parameters.AddWithValue("$duration", r.DurationMs);
 		cmd.Parameters.AddWithValue("$error", (object?)r.Error ?? DBNull.Value);
 		cmd.ExecuteNonQuery();
+	}
+
+	private SqliteConnection Open()
+	{
+		var conn = new SqliteConnection(_connectionString);
+		conn.Open();
+		return conn;
 	}
 }

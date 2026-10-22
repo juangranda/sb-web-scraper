@@ -1,5 +1,8 @@
 using System.Globalization;
 using Microsoft.Data.Sqlite;
+using scraper_app.Models;
+
+namespace scraper_app.Storage;
 
 public class UsageStore
 {

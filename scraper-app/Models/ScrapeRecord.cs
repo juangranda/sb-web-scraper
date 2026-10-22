@@ -1,3 +1,5 @@
+namespace scraper_app.Models;
+
 public class ScrapeRecord
 {
 	public DateTime TimestampUtc { get; set; }

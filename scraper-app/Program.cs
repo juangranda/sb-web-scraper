@@ -1,4 +1,7 @@
 ﻿using HtmlAgilityPack;
+using scraper_app.Filters;
+using scraper_app.Models;
+using scraper_app.Storage;
 using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -20,7 +23,7 @@ Directory.CreateDirectory(dataFolder);
 var pathToDb = Path.Combine(dataFolder, "usage.db");
 var usageStore = new UsageStore(pathToDb);
 
-var filterName = args.FirstOrDefault() ?? "none";
+var filterName = args.FirstOrDefault() ?? NoFilter.FilterName;
 
 if (filterName == "history")
 {
@@ -127,5 +130,3 @@ static int ParseInt(string? text)
 	var match = Regex.Match(text, @"\d+");
 	return match.Success ? int.Parse(match.Value) : 0;
 }
-
-record Entry(int Number, string Title, int Points, int Comments);

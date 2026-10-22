@@ -4,32 +4,26 @@ using scraper_app.Models;
 
 namespace scraper_app.Storage;
 
-public class UsageStore
+public interface IUsageStore
+{
+	void Save(ScrapeRecord record);
+	void PrintRecent(int limit);
+}
+
+public class UsageStore : IUsageStore
 {
 	readonly string _connectionString;
 
 	public UsageStore(string path)
 	{
+		var directory = Path.GetDirectoryName(Path.GetFullPath(path));
+		if (directory != null)
+		{
+			Directory.CreateDirectory(directory);
+		}
 		_connectionString = new SqliteConnectionStringBuilder { DataSource = path }.ToString();
 
-		using var conn = Open();
-		using var cmd = conn.CreateCommand();
-		cmd.CommandText = """
-			CREATE TABLE IF NOT EXISTS usage (
-				id					INTEGER PRIMARY KEY AUTOINCREMENT,
-				timestamp_utc		TEXT	NOT NULL,
-				filter				TEXT	NOT NULL,
-				success				INTEGER NOT NULL,
-				http_status			INTEGER,
-				entries_scraped		INTEGER NOT NULL,
-				entries_returned	INTEGER NOT NULL,
-				response_bytes		INTEGER NOT NULL,
-				fetch_ms			INTEGER NOT NULL,
-				duration_ms			INTEGER NOT NULL,
-				error				TEXT
-			)
-			""";
-		cmd.ExecuteNonQuery();
+		ensureSchema();
 	}
 
 	public void Save(ScrapeRecord r)
@@ -74,6 +68,28 @@ public class UsageStore
 			var error = reader.IsDBNull(8) ? "" : reader.GetString(8);
 			Console.WriteLine($"{reader.GetString(0),-28}  {reader.GetString(1),-12}  {(reader.GetBoolean(2) ? "yes" : "no"),-3}  {status,4}  {reader.GetInt32(4),7}  {reader.GetInt32(5),8}  {reader.GetInt64(6),8}  {reader.GetInt64(7),8}  {error}");
 		}
+	}
+
+	private void ensureSchema()
+	{
+		using var conn = Open();
+		using var cmd = conn.CreateCommand();
+		cmd.CommandText = """
+			CREATE TABLE IF NOT EXISTS usage (
+				id					INTEGER PRIMARY KEY AUTOINCREMENT,
+				timestamp_utc		TEXT	NOT NULL,
+				filter				TEXT	NOT NULL,
+				success				INTEGER NOT NULL,
+				http_status			INTEGER,
+				entries_scraped		INTEGER NOT NULL,
+				entries_returned	INTEGER NOT NULL,
+				response_bytes		INTEGER NOT NULL,
+				fetch_ms			INTEGER NOT NULL,
+				duration_ms			INTEGER NOT NULL,
+				error				TEXT
+			)
+			""";
+		cmd.ExecuteNonQuery();
 	}
 
 	private SqliteConnection Open()

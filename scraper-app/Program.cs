@@ -18,10 +18,9 @@ var filters = new Dictionary<string, (string Heading, Func<IEnumerable<Entry>, I
 		e => e.Where(x => CountWords(x.Title) <= 5).OrderByDescending(x => x.Points)),
 };
 
-var dataFolder = Path.Combine(Directory.GetCurrentDirectory(), "data");
-Directory.CreateDirectory(dataFolder);
-var pathToDb = Path.Combine(dataFolder, "usage.db");
-var usageStore = new UsageStore(pathToDb);
+var directory = Path.Combine(Directory.GetCurrentDirectory(), "data", "usage.db");
+
+var usageStore = new UsageStore(directory);
 
 var filterName = args.FirstOrDefault() ?? NoFilter.FilterName;
 

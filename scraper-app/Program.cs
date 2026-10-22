@@ -22,6 +22,12 @@ var usageStore = new UsageStore(pathToDb);
 
 var filterName = args.FirstOrDefault() ?? "none";
 
+if (filterName == "history")
+{
+	usageStore.PrintRecent(10);
+	return;
+}
+
 var record = new ScrapeRecord
 {
 	TimestampUtc = DateTime.UtcNow,
@@ -54,7 +60,7 @@ try
 	}
 	else
 	{
-		//throw error
+		throw new ArgumentException($"Unknown filter '{filterName}'. Use one of: {string.Join(", ", filters.Keys)}.");
 	}
 }
 catch (Exception ex)

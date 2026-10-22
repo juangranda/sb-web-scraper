@@ -51,6 +51,28 @@ public class UsageStore
 		cmd.ExecuteNonQuery();
 	}
 
+	public void PrintRecent(int limit)
+	{
+		using var conn = Open();
+		using var cmd = conn.CreateCommand();
+		cmd.CommandText = """
+			SELECT timestamp_utc, filter, success, http_status, entries_scraped,
+					entries_returned, fetch_ms, duration_ms, error
+			FROM usage ORDER BY id DESC LIMIT $limit
+			""";
+		cmd.Parameters.AddWithValue("$limit", limit);
+
+		Console.WriteLine($"{"Timestamp (UTC)",-28}  {"Filter",-12}  {"OK",-3}  {"HTTP",4}  {"Scraped",7}  {"Returned",8}  {"Fetch ms",8}  {"Total ms",8}  Error");
+		Console.WriteLine(new string('-', 110));
+		using var reader = cmd.ExecuteReader();
+		while (reader.Read())
+		{
+			var status = reader.IsDBNull(3) ? "-" : reader.GetInt32(3).ToString();
+			var error = reader.IsDBNull(8) ? "" : reader.GetString(8);
+			Console.WriteLine($"{reader.GetString(0),-28}  {reader.GetString(1),-12}  {(reader.GetBoolean(2) ? "yes" : "no"),-3}  {status,4}  {reader.GetInt32(4),7}  {reader.GetInt32(5),8}  {reader.GetInt64(6),8}  {reader.GetInt64(7),8}  {error}");
+		}
+	}
+
 	private SqliteConnection Open()
 	{
 		var conn = new SqliteConnection(_connectionString);

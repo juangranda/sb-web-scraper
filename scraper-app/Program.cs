@@ -1,4 +1,5 @@
 ﻿using HtmlAgilityPack;
+using scraper_app.CrawlServices;
 using scraper_app.Filters;
 using scraper_app.Models;
 using scraper_app.Storage;

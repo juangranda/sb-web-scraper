@@ -7,7 +7,7 @@ namespace scraper_app.Storage;
 public interface IUsageStore
 {
 	void Save(ScrapeRecord record);
-	void PrintRecent(int limit);
+	IReadOnlyList<ScrapeRecord> GetRecent(int limit);
 }
 
 public class UsageStore : IUsageStore
@@ -23,7 +23,7 @@ public class UsageStore : IUsageStore
 		}
 		_connectionString = new SqliteConnectionStringBuilder { DataSource = path }.ToString();
 
-		ensureSchema();
+		EnsureSchema();
 	}
 
 	public void Save(ScrapeRecord r)
@@ -48,29 +48,41 @@ public class UsageStore : IUsageStore
 		cmd.ExecuteNonQuery();
 	}
 
-	public void PrintRecent(int limit)
+	public IReadOnlyList<ScrapeRecord> GetRecent(int limit)
 	{
 		using var conn = Open();
 		using var cmd = conn.CreateCommand();
 		cmd.CommandText = """
 			SELECT timestamp_utc, filter, success, http_status, entries_scraped,
-					entries_returned, fetch_ms, duration_ms, error
+					entries_returned, response_bytes, fetch_ms, duration_ms, error
 			FROM usage ORDER BY id DESC LIMIT $limit
 			""";
 		cmd.Parameters.AddWithValue("$limit", limit);
 
-		Console.WriteLine($"{"Timestamp (UTC)",-28}  {"Filter",-12}  {"OK",-3}  {"HTTP",4}  {"Scraped",7}  {"Returned",8}  {"Fetch ms",8}  {"Total ms",8}  Error");
-		Console.WriteLine(new string('-', 110));
+		var records = new List<ScrapeRecord>();
+
 		using var reader = cmd.ExecuteReader();
 		while (reader.Read())
 		{
-			var status = reader.IsDBNull(3) ? "-" : reader.GetInt32(3).ToString();
-			var error = reader.IsDBNull(8) ? "" : reader.GetString(8);
-			Console.WriteLine($"{reader.GetString(0),-28}  {reader.GetString(1),-12}  {(reader.GetBoolean(2) ? "yes" : "no"),-3}  {status,4}  {reader.GetInt32(4),7}  {reader.GetInt32(5),8}  {reader.GetInt64(6),8}  {reader.GetInt64(7),8}  {error}");
+			var record = new ScrapeRecord
+			{
+				TimestampUtc = DateTime.Parse(reader.GetString(0), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
+				Filter = reader.GetString(1),
+				Success = reader.GetBoolean(2),
+				HttpStatus = reader.IsDBNull(3) ? null : reader.GetInt32(3),
+				EntriesScraped = reader.GetInt32(4),
+				EntriesReturned = reader.GetInt32(5),
+				ResponseBytes = reader.GetInt64(6),
+				FetchMs = reader.GetInt64(7),
+				DurationMs = reader.GetInt64(8),
+				Error = reader.IsDBNull(9) ? null : reader.GetString(9)
+			};
+			records.Add(record);
 		}
+		return records;
 	}
 
-	private void ensureSchema()
+	private void EnsureSchema()
 	{
 		using var conn = Open();
 		using var cmd = conn.CreateCommand();

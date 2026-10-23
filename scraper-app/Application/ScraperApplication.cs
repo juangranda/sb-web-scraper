@@ -19,7 +19,8 @@ public class ScraperApplication(
 
 		if (filterName == "history")
 		{
-			usageStore.PrintRecent(10);
+			var history = usageStore.GetRecent(20);
+			printer.PrintHistory(history);
 			return 0;
 		}
 
@@ -49,7 +50,6 @@ public class ScraperApplication(
 				record.EntriesReturned = selected.Count;
 				
 				printer.PrintEntries(filter.Name, selected);
-				//PrintTable(filter.Name, selected);
 
 				record.Success = true;
 			}
@@ -71,25 +71,5 @@ public class ScraperApplication(
 		}
 
 		return record.Success ? 0 : 1;
-	}
-
-	private static int CountWords(string text)
-	{
-		var textSplit = text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
-		var count =	textSplit.Count(token => token.Any(char.IsLetterOrDigit));
-		return count;
-	}
-
-	//TODO: move to a separate service class and wire up via DI
-	static void PrintTable(string heading, IEnumerable<Entry> items)
-	{
-		Console.WriteLine();
-		Console.WriteLine(heading);
-		Console.WriteLine($"{"#",3}  {"Points",6}  {"Comments",8}  {"Words",5}  Title");
-		Console.WriteLine(new string('-', 80));
-		foreach (var e in items)
-		{
-			Console.WriteLine($"{e.Number,3}  {e.Points,6}  {e.Comments,8}  {CountWords(e.Title),5}  {e.Title}");
-		}
 	}
 }

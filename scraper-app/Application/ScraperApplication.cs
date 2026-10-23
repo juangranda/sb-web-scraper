@@ -8,7 +8,8 @@ namespace scraper_app.Application;
 
 public class ScraperApplication(
 	INewsCrawler newsCrawler,
-	IUsageStore usageStore)
+	IUsageStore usageStore,
+	IFilterCatalog filters)
 {
 	public async Task<int> RunAsync(string[] args, CancellationToken cancellationToken = default)
 	{
@@ -25,16 +26,6 @@ public class ScraperApplication(
 
 	private async Task<int> RunFilterAsync(string filterName, CancellationToken cancellationToken)
 	{
-		//TODO: wire up filters from DI instead of hardcoding them here
-		var filters = new Dictionary<string, (string Heading, Func<IEnumerable<Entry>, IEnumerable<Entry>> Apply)>
-		{
-			["none"] = ("All entries", e => e),
-			["long-titles"] = ("More than five words in the title, by comments (desc)",
-								e => e.Where(x => CountWords(x.Title) > 5).OrderByDescending(x => x.Comments)),
-			["short-titles"] = ("Five or fewer words in the title, by points (desc)",
-								e => e.Where(x => CountWords(x.Title) <= 5).OrderByDescending(x => x.Points))
-		};
-
 		var record = new ScrapeRecord
 		{
 			TimestampUtc = DateTime.UtcNow,
@@ -44,7 +35,7 @@ public class ScraperApplication(
 		var total = Stopwatch.StartNew();
 		try
 		{
-			if (filters.TryGetValue(filterName, out var filter))
+			if (filters.TryGetFilter(filterName, out var filter))
 			{
 				var result = await newsCrawler.CrawlAsync("https://news.ycombinator.com/", 30, cancellationToken);
 				record.HttpStatus = result.Page.StatusCode;
@@ -55,13 +46,13 @@ public class ScraperApplication(
 				var selected = filter.Apply(result.Entries).ToList();
 				record.EntriesReturned = selected.Count;
 				
-				PrintTable(filter.Heading, selected);
+				PrintTable(filter.Name, selected);
 
 				record.Success = true;
 			}
 			else
 			{
-				throw new ArgumentException($"Unknown filter '{filterName}'. Use one of: {string.Join(", ", filters.Keys)}.");
+				throw new ArgumentException($"Unknown filter '{filterName}'. Use one of: {string.Join(", ", filters.Names)}.");
 			}
 		}
 		catch (Exception ex)

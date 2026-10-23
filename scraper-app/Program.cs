@@ -24,6 +24,10 @@ var services = new ServiceCollection()
 	.AddSingleton<IPageFetcher, HttpPageFetcher>()
 	.AddSingleton<IEntryParser, NewsParser>()
 	.AddSingleton<INewsCrawler, NewsCrawler>()
+	.AddSingleton<IEntryFilter, NoFilter>()
+	.AddSingleton<IEntryFilter, LongTitleFilter>()
+	.AddSingleton<IEntryFilter, ShortTitleFilter>()
+	.AddSingleton<IFilterCatalog, FilterCatalog>()
 	.AddSingleton<IUsageStore>(_ => new UsageStore(Path.Combine(Directory.GetCurrentDirectory(), "data", "usage.db")))
 	.AddSingleton<ScraperApplication>();
 

@@ -2,6 +2,7 @@
 using scraper_app.Application;
 using scraper_app.CrawlServices;
 using scraper_app.Filters;
+using scraper_app.PrintServices;
 using scraper_app.Storage;
 using scraper_app.TextServices;
 
@@ -20,6 +21,7 @@ var services = new ServiceCollection()
 	.AddSingleton<IEntryFilter, LongTitleFilter>()
 	.AddSingleton<IEntryFilter, ShortTitleFilter>()
 	.AddSingleton<IFilterCatalog, FilterCatalog>()
+	.AddSingleton<IConsolePrinter, ConsolePrinter>()
 	.AddSingleton<IUsageStore>(_ => new UsageStore(Path.Combine(Directory.GetCurrentDirectory(), "data", "usage.db")))
 	.AddSingleton<ScraperApplication>();
 

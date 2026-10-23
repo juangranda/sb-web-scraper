@@ -2,6 +2,7 @@ using System.Diagnostics;
 using scraper_app.CrawlServices;
 using scraper_app.Filters;
 using scraper_app.Models;
+using scraper_app.PrintServices;
 using scraper_app.Storage;
 
 namespace scraper_app.Application;
@@ -9,7 +10,8 @@ namespace scraper_app.Application;
 public class ScraperApplication(
 	INewsCrawler newsCrawler,
 	IUsageStore usageStore,
-	IFilterCatalog filters)
+	IFilterCatalog filters,
+	IConsolePrinter printer)
 {
 	public async Task<int> RunAsync(string[] args, CancellationToken cancellationToken = default)
 	{
@@ -46,7 +48,8 @@ public class ScraperApplication(
 				var selected = filter.Apply(result.Entries).ToList();
 				record.EntriesReturned = selected.Count;
 				
-				PrintTable(filter.Name, selected);
+				printer.PrintEntries(filter.Name, selected);
+				//PrintTable(filter.Name, selected);
 
 				record.Success = true;
 			}

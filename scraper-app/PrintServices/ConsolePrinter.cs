@@ -7,6 +7,7 @@ public interface IConsolePrinter
 {
 	void PrintEntries(string heading, IEnumerable<Entry> entries);
 	void PrintHistory(IEnumerable<ScrapeRecord> records);
+	void PrintError(string message);
 }
 
 public class ConsolePrinter(IWordCounter wordCounter) : IConsolePrinter
@@ -36,5 +37,11 @@ public class ConsolePrinter(IWordCounter wordCounter) : IConsolePrinter
 			var error = string.IsNullOrEmpty(r.Error) ? "-" : r.Error;
 			Console.WriteLine($"{r.TimestampUtc,-28}  {r.Filter,-12}  {(r.Success ? "yes" : "no"),-3}  {status,4}  {r.EntriesScraped,7}  {r.EntriesReturned,8}  {r.FetchMs,8}  {r.DurationMs,8}  {error}");
 		}
+	}
+
+	public void PrintError(string message)
+	{
+		Console.WriteLine();
+		Console.Error.WriteLine($"Error: {message}");
 	}
 }

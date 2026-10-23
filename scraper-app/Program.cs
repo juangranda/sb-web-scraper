@@ -6,6 +6,8 @@ using scraper_app.PrintServices;
 using scraper_app.Storage;
 using scraper_app.TextServices;
 
+// Usage: dotnet run -- [none|long-titles|short-titles|history]
+
 var services = new ServiceCollection()
 	.AddSingleton(_ =>
 	{
@@ -26,5 +28,4 @@ var services = new ServiceCollection()
 	.AddSingleton<ScraperApplication>();
 
 await using var provider = services.BuildServiceProvider();
-var app = provider.GetRequiredService<ScraperApplication>().RunAsync(args);
-return await app;
+return await provider.GetRequiredService<ScraperApplication>().RunAsync(args);

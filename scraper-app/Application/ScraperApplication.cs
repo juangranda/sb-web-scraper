@@ -13,11 +13,15 @@ public class ScraperApplication(
 	IFilterCatalog filters,
 	IConsolePrinter printer)
 {
+	private const string Url = "https://news.ycombinator.com/";
+	private const int MaxEntries = 30;
+	private const string HistoryCommand = "history";
+
 	public async Task<int> RunAsync(string[] args, CancellationToken cancellationToken = default)
 	{
 		var filterName = args.FirstOrDefault() ?? NoFilter.FilterName;
 
-		if (filterName == "history")
+		if (filterName == HistoryCommand)
 		{
 			var history = await usageStore.GetRecentAsync(20, cancellationToken);
 			printer.PrintHistory(history);
@@ -40,7 +44,7 @@ public class ScraperApplication(
 		{
 			if (filters.TryGetFilter(filterName, out var filter))
 			{
-				var result = await newsCrawler.CrawlAsync("https://news.ycombinator.com/", 30, cancellationToken);
+				var result = await newsCrawler.CrawlAsync(Url, MaxEntries, cancellationToken);
 				record.HttpStatus = result.Page.StatusCode;
 				record.FetchMs = (long)result.Page.Elapsed.TotalMilliseconds;
 				record.ResponseBytes = result.Page.ResponseBytes;
@@ -55,14 +59,14 @@ public class ScraperApplication(
 			}
 			else
 			{
-				throw new ArgumentException($"Unknown filter '{filterName}'. Use one of: {string.Join(", ", filters.Names)}.");
+				throw new ArgumentException($"Unknown filter '{filterName}'. Use one of: {string.Join(", ", filters.Names)}, {HistoryCommand}.");
 			}
 		}
 		catch (Exception ex)
 		{
 			record.Success = false;
 			record.Error = ex.Message;
-			Console.Error.WriteLine($"Error: {ex.Message}");
+			printer.PrintError(ex.Message);
 		}
 		finally
 		{

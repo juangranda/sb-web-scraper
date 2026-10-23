@@ -7,21 +7,12 @@ public interface INewsCrawler
 	Task<CrawlResult> CrawlAsync(string url, int maxEntries, CancellationToken cancellationToken = default);
 }
 
-public class NewsCrawler : INewsCrawler
+public class NewsCrawler(IPageFetcher fetcher, IEntryParser parser) : INewsCrawler
 {
-	private readonly IPageFetcher _fetcher;
-	private readonly IEntryParser _parser;
-
-	public NewsCrawler(IPageFetcher fectcher, IEntryParser parser)
-	{
-		_fetcher = fectcher;
-		_parser = parser;
-	}
-
 	public async Task<CrawlResult> CrawlAsync(string url, int maxEntries, CancellationToken cancellationToken = default)
 	{
-		var page = await _fetcher.FetchAsync(url, cancellationToken);
-		var entries = _parser.Parse(page.Html, maxEntries);
+		var page = await fetcher.FetchAsync(url, cancellationToken);
+		var entries = parser.Parse(page.Html, maxEntries);
 		return new CrawlResult(entries, page);
 	}
 }

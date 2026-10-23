@@ -26,3 +26,18 @@ public class FakeNewsParser(IReadOnlyList<Entry> entries) : IEntryParser
 		return entries;
 	}
 }
+
+public class StubHttpMessageHandler(HttpStatusCode status, string content) : HttpMessageHandler
+{
+	public string? Url { get; set; }
+
+	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+	{
+		Url = request.RequestUri?.ToString() ?? string.Empty;
+		var response = new HttpResponseMessage(status)
+		{
+			Content = new StringContent(content)
+		};
+		return Task.FromResult(response);
+	}
+}

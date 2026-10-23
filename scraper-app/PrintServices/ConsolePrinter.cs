@@ -15,7 +15,7 @@ public class ConsolePrinter(IWordCounter wordCounter) : IConsolePrinter
 	public void PrintEntries(string heading, IEnumerable<Entry> entries)
 	{
 		Console.WriteLine();
-		Console.WriteLine(heading);
+		Console.WriteLine($"Filter: {heading}");
 		Console.WriteLine($"{"#",3}  {"Points",6}  {"Comments",8}  {"Words",5}  Title");
 		Console.WriteLine(new string('-', 80));
 		foreach (var e in entries)

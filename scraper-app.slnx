@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="scraper-app.Tests/scraper-app.Tests.csproj" />
+  <Project Path="scraper-app/scraper-app.csproj" />
+</Solution>

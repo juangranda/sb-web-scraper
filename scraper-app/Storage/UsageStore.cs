@@ -6,8 +6,8 @@ namespace scraper_app.Storage;
 
 public interface IUsageStore
 {
-	void Save(ScrapeRecord record);
-	IReadOnlyList<ScrapeRecord> GetRecent(int limit);
+	Task SaveAsync(ScrapeRecord record, CancellationToken cancellationToken = default);
+	Task<IReadOnlyList<ScrapeRecord>> GetRecentAsync(int limit, CancellationToken cancellationToken = default);
 }
 
 public class UsageStore : IUsageStore
@@ -26,10 +26,10 @@ public class UsageStore : IUsageStore
 		EnsureSchema();
 	}
 
-	public void Save(ScrapeRecord r)
+	public async Task SaveAsync(ScrapeRecord r, CancellationToken cancellationToken = default)
 	{
-		using var conn = Open();
-		using var cmd = conn.CreateCommand();
+		await using var conn = await OpenAsync(cancellationToken);
+		await using var cmd = conn.CreateCommand();
 		cmd.CommandText = """
 			INSERT INTO usage (timestamp_utc, filter, success, http_status, entries_scraped,
 								entries_returned, response_bytes, fetch_ms, duration_ms, error)
@@ -45,13 +45,13 @@ public class UsageStore : IUsageStore
 		cmd.Parameters.AddWithValue("$fetch", r.FetchMs);
 		cmd.Parameters.AddWithValue("$duration", r.DurationMs);
 		cmd.Parameters.AddWithValue("$error", (object?)r.Error ?? DBNull.Value);
-		cmd.ExecuteNonQuery();
+		await cmd.ExecuteNonQueryAsync(cancellationToken);
 	}
 
-	public IReadOnlyList<ScrapeRecord> GetRecent(int limit)
+	public async Task<IReadOnlyList<ScrapeRecord>> GetRecentAsync(int limit, CancellationToken cancellationToken = default)
 	{
-		using var conn = Open();
-		using var cmd = conn.CreateCommand();
+		await using var conn = await OpenAsync(cancellationToken);
+		await using var cmd = conn.CreateCommand();
 		cmd.CommandText = """
 			SELECT timestamp_utc, filter, success, http_status, entries_scraped,
 					entries_returned, response_bytes, fetch_ms, duration_ms, error
@@ -61,8 +61,8 @@ public class UsageStore : IUsageStore
 
 		var records = new List<ScrapeRecord>();
 
-		using var reader = cmd.ExecuteReader();
-		while (reader.Read())
+		await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+		while (await reader.ReadAsync(cancellationToken))
 		{
 			var record = new ScrapeRecord
 			{
@@ -84,7 +84,8 @@ public class UsageStore : IUsageStore
 
 	private void EnsureSchema()
 	{
-		using var conn = Open();
+		using var conn = new SqliteConnection(_connectionString);
+		conn.Open();
 		using var cmd = conn.CreateCommand();
 		cmd.CommandText = """
 			CREATE TABLE IF NOT EXISTS usage (
@@ -104,10 +105,10 @@ public class UsageStore : IUsageStore
 		cmd.ExecuteNonQuery();
 	}
 
-	private SqliteConnection Open()
+	private async Task<SqliteConnection> OpenAsync(CancellationToken cancellationToken = default)
 	{
 		var conn = new SqliteConnection(_connectionString);
-		conn.Open();
+		await conn.OpenAsync(cancellationToken);
 		return conn;
 	}
 }

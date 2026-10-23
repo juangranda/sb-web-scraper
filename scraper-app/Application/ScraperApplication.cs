@@ -19,7 +19,7 @@ public class ScraperApplication(
 
 		if (filterName == "history")
 		{
-			var history = usageStore.GetRecent(20);
+			var history = await usageStore.GetRecentAsync(20, cancellationToken);
 			printer.PrintHistory(history);
 			return 0;
 		}
@@ -67,7 +67,7 @@ public class ScraperApplication(
 		finally
 		{
 			record.DurationMs = total.ElapsedMilliseconds;
-			usageStore.Save(record);
+			await usageStore.SaveAsync(record, cancellationToken);
 		}
 
 		return record.Success ? 0 : 1;
